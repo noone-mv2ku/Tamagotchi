@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tamagotchi Arcade Edition 🐾</title>
+    <title>Tamagotchi Arcade Pro 🐾</title>
+	<link rel="icon" type="image/png" href="logo.png">
     <style>
         body {
             background-color: #ffe4e1;
@@ -42,6 +43,14 @@
         .bar-bg { background-color: #f0f0f0; border-radius: 10px; height: 14px; overflow: hidden; }
         .bar-fill { height: 100%; background-color: #ff69b4; width: 100%; transition: width 0.5s; }
         
+        /* قسم المهام */
+        .quests-container { background: #fff5f5; border: 2px solid #ffb6c1; border-radius: 15px; padding: 10px; margin: 15px 0; text-align: right; }
+        body.sleeping .quests-container { background: #2c3e50; border-color: #1a252f; }
+        .quest-title { font-size: 13px; font-weight: bold; margin: 0 0 5px 0; color: #ff69b4; text-align: center; }
+        .quest-item { font-size: 12px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; border-bottom: 1px dashed #ffd1d1; padding-bottom: 3px; }
+        .quest-btn { background: #20b2aa; border: none; color: white; padding: 2px 6px; font-size: 11px; border-radius: 5px; cursor: pointer; }
+        .quest-btn:disabled { background: #ccc; cursor: not-allowed; }
+
         .sub-menu {
             display: none;
             background: #fff0f5;
@@ -70,20 +79,24 @@
         .card { height: 45px; background-color: #ffb6c1; border-radius: 8px; font-size: 20px; display: flex; justify-content: center; align-items: center; cursor: pointer; color: transparent; user-select: none; }
         .card.flipped { background-color: #fff0f5; color: initial; }
         
-        /* شاشة لعبة الدودة */
         #snake-canvas { background-color: #333; border-radius: 10px; display: block; margin: 10px auto; }
         .snake-controls { display: grid; grid-template-columns: repeat(3, 1fr); width: 120px; margin: 10px auto; gap: 5px; }
+
+        #clicker-area { margin: 15px 0; text-align: center; }
+        .click-target { width: 60px; height: 60px; background-color: #ff4757; color: white; font-size: 24px; border-radius: 50%; display: flex; justify-content: center; align-items: center; cursor: pointer; margin: 10px auto; user-select: none; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+        .click-target:active { transform: scale(0.9); }
 
         #status-text { font-weight: bold; color: #555; margin: 12px 0; min-height: 22px; }
         body.sleeping #status-text { color: #ecf0f1; }
         .main-btn { font-size: 15px; padding: 8px 16px; }
         .coins-display { font-weight: bold; color: #ffd700; font-size: 16px; margin: 5px 0; }
+        .food-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
     </style>
 </head>
 <body>
 
     <div class="pet-container">
-        <h2 style="color: #ff69b4; margin: 0;">تاماغوتشي آركيد 🎮</h2>
+        <h2 style="color: #ff69b4; margin: 0;">تاماغوتشي آركيد برو 🎮</h2>
         <div id="pet-stage" class="pet-stage">المرحلة: بيضة نائمة 🥚</div>
         <div class="coins-display">🪙 العملات: <span id="coins-count">0</span></div>
         
@@ -111,6 +124,22 @@
             <div class="bar-bg"><div id="xp-bar" class="bar-fill" style="background-color: #9370db; width: 0%;"></div></div>
         </div>
 
+        <div class="quests-container">
+            <p class="quest-title">📜 مهام اليوم المربحة</p>
+            <div class="quest-item">
+                <span>🍖 إطعام القطة (3 مرات): <b id="q1-prog">0/3</b></span>
+                <button id="q1-btn" class="quest-btn" onclick="claimQuest(1)" disabled>استلام 🪙15</button>
+            </div>
+            <div class="quest-item">
+                <span>🐍 العبي لعبة الدودة: <b id="q2-prog">0/1</b></span>
+                <button id="q2-btn" class="quest-btn" onclick="claimQuest(2)" disabled>استلام 🪙20</button>
+            </div>
+            <div class="quest-item">
+                <span>🔴 حققي 15 نقطة بالنقر: <b id="q3-prog">0/15</b></span>
+                <button id="q3-btn" class="quest-btn" onclick="claimQuest(3)" disabled>استلام 🪙25</button>
+            </div>
+        </div>
+
         <div id="main-controls" style="display: flex; justify-content: space-around; margin-top: 15px; flex-wrap: wrap;">
             <button id="feed-main" class="menu-btn main-btn" onclick="toggleMenu('food-menu')">إطعام 🥛</button>
             <button id="play-main" class="menu-btn main-btn" onclick="toggleMenu('games-hub')">الألعاب 🎮</button>
@@ -121,14 +150,22 @@
         <button id="restart-btn" class="menu-btn main-btn" style="display:none; background-color:#ff4757;" onclick="restartGame()">إعادة إحياء اللعبة 🔄</button>
 
         <div id="food-menu" class="sub-menu">
-            <button class="menu-btn" onclick="feed('🍬 حلوى لذيذة وحلوة! 😋', 15)">🍬 حلوى</button>
-            <button class="menu-btn" onclick="feed('🥛 حليب دافئ ومغدّي.. مياو! 🐾', 25)">🥛 حليب</button>
-            <button class="menu-btn" onclick="feed('💧 ماء بارد ومنعش! 🧊', 10)">💧 ماء</button>
+            <div class="food-grid">
+                <button class="menu-btn" onclick="feed('🥛 حليب دافئ ومغدّي مياو!', 20, 5)">🥛 حليب</button>
+                <button class="menu-btn" onclick="feed('🐟 سمكة طازجة لقمة سائغة!', 35, 10)">🐟 سمك</button>
+                <button class="menu-btn" onclick="feed('🍗 دجاج مقرمش ولذيذ للغاية!', 40, 5)">🍗 دجاج</button>
+                <button class="menu-btn" onclick="feed('🍕 بيتزا ساخنة بالجبنة المطاطية!', 30, -5)">🍕 بيتزا</button>
+                <button class="menu-btn" onclick="feed('🍓 فراولة حلوة ومنعشة!', 15, 15)">🍓 فراولة</button>
+                <button class="menu-btn" onclick="feed('🍦 آيس كريم بارد يسرسح!', 20, 10)">🍦 آيس كريم</button>
+            </div>
         </div>
 
         <div id="games-hub" class="sub-menu">
-            <button class="menu-btn" onclick="openGame('memory')">🧠 لعبة الذاكرة</button>
-            <button class="menu-btn" onclick="openGame('snake')">🐍 لعبة الدودة</button>
+            <div style="display: flex; justify-content: space-around; margin-bottom: 10px;">
+                <button class="menu-btn" onclick="openGame('memory')">🧠 الذاكرة</button>
+                <button class="menu-btn" onclick="openGame('snake')">🐍 الدودة</button>
+                <button class="menu-btn" onclick="openGame('clicker')">🔴 النقر السريع</button>
+            </div>
             
             <div id="memory-game-area" style="display:none;">
                 <div class="memory-game" id="memory-board"></div>
@@ -136,12 +173,20 @@
 
             <div id="snake-game-area" style="display:none;">
                 <canvas id="snake-canvas" width="200" height="200"></canvas>
-                <p style="font-size: 11px; color: #777; margin: 2px 0;">يمكنك استخدام أسهم الكيبورد ⌨️ أو الأزرار بالأسفل 👇</p>
+                <p style="font-size: 11px; color: #777; margin: 2px 0;">الأسهم بالكيبورد ⌨️ أو الأزرار 👇</p>
                 <div class="snake-controls">
-                    <td></td><button class="menu-btn" onclick="changeSnakeDir('up')">▲</button><td></td>
-                    <button class="menu-btn" onclick="changeSnakeDir('left')">◀</button><td></td><button class="menu-btn" onclick="changeSnakeDir('right')">▶</button>
-                    <td></td><button class="menu-btn" onclick="changeSnakeDir('down')">▼</button><td></td>
+                    <button class="menu-btn" style="grid-column: 2;" onclick="changeSnakeDir('up')">▲</button>
+                    <button class="menu-btn" style="grid-column: 1;" onclick="changeSnakeDir('left')">◀</button>
+                    <button class="menu-btn" style="grid-column: 3;" onclick="changeSnakeDir('right')">▶</button>
+                    <button class="menu-btn" style="grid-column: 2;" onclick="changeSnakeDir('down')">▼</button>
                 </div>
+            </div>
+
+            <div id="clicker-game-area" style="display:none;">
+                <p id="clicker-timer" style="font-size: 13px; font-weight: bold; color: #ff4757; margin: 2px 0;">الوقت: 10s</p>
+                <p id="clicker-score" style="font-size: 13px; font-weight: bold; color: #20b2aa; margin: 2px 0;">النقاط: 0</p>
+                <button id="start-clicker-btn" class="menu-btn" style="background-color: #20b2aa;" onclick="startClickerGame()">ابدأ التحدي 🏁</button>
+                <div id="clicker-target" class="click-target" style="display: none;" onclick="hitTarget()">🔴</div>
             </div>
         </div>
 
@@ -153,6 +198,24 @@
     </div>
 
     <script>
+        // نظام توليد الأصوات البرمجية الكلاسيكية المدمج
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playTone(freq, type, duration) {
+            try {
+                let osc = audioCtx.createOscillator();
+                let gain = audioCtx.createGain();
+                osc.type = type; osc.frequency.value = freq;
+                gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + duration);
+                osc.connect(gain); gain.connect(audioCtx.destination);
+                osc.start(); osc.stop(audioCtx.currentTime + duration);
+            } catch(e){}
+        }
+        function soundEat() { playTone(523.25, 'sine', 0.1); setTimeout(() => playTone(659.25, 'sine', 0.15), 100); }
+        function soundClick() { playTone(880, 'triangle', 0.05); }
+        function soundWin() { playTone(523.25, 'square', 0.1); setTimeout(() => playTone(659.25, 'square', 0.1), 100); setTimeout(() => playTone(783.99, 'square', 0.3), 200); }
+        function soundLose() { playTone(293.66, 'sawtooth', 0.2); setTimeout(() => playTone(220, 'sawtooth', 0.4), 200); }
+
         let hunger = parseInt(localStorage.getItem('tg_hunger')) || 100;
         let happiness = parseInt(localStorage.getItem('tg_happiness')) || 100;
         let energy = parseInt(localStorage.getItem('tg_energy')) || 100;
@@ -161,26 +224,41 @@
         let isSleeping = localStorage.getItem('tg_sleeping') === 'true';
         let currentAcc = localStorage.getItem('tg_acc') || '';
 
+        // تتبع حالة المهام
+        let q1Count = parseInt(localStorage.getItem('tg_q1')) || 0;
+        let q2Count = parseInt(localStorage.getItem('tg_q2')) || 0;
+        let q3Count = parseInt(localStorage.getItem('tg_q3')) || 0;
+
         let gameLoop;
         let isSnakePlaying = false;
+        let clickScore = 0; let clickTimer = 10; let clickInterval;
 
         function initGame() {
-            updateBars();
-            updateCoins();
+            // احتساب الجوع والتعب في الخلفية أثناء الغياب (Offline Progression)
+            let lastTime = localStorage.getItem('tg_last_time');
+            if (lastTime) {
+                let timePassed = Math.floor((Date.now() - parseInt(lastTime)) / 1000); // بالثواني
+                let intervalsPassed = Math.floor(timePassed / 10); // كم 10 ثواني مرت
+                if (intervalsPassed > 0) {
+                    if (isSleeping) {
+                        energy = Math.min(100, energy + (intervalsPassed * 8));
+                        hunger = Math.max(0, hunger - (intervalsPassed * 1));
+                    } else {
+                        hunger = Math.max(0, hunger - (intervalsPassed * 3));
+                        happiness = Math.max(0, happiness - (intervalsPassed * 3));
+                        energy = Math.max(0, energy - (intervalsPassed * 2));
+                    }
+                }
+            }
+
+            updateBars(); updateCoins(); updateQuestsUI();
             if (currentAcc) { document.getElementById('accessory').innerText = currentAcc; document.getElementById('accessory').style.display = 'block'; }
             if (isSleeping) { document.body.classList.add('sleeping'); document.getElementById('sleep-btn').innerText = "استيقاظ ⏰"; disableButtons(true); }
-            checkStatus();
-            startLoop();
+            checkStatus(); startLoop();
             
-            // ربط أسهم لوحة المفاتيح بالحاسوب
             window.addEventListener('keydown', function(e) {
-                if (!isSnakePlaying) return; // لا تفعل شيئاً إذا لم تكن لعبة الدودة مفتوحة
-                
-                // منع الشاشة من النزول والصعود عند الضغط على الأسهم أثناء اللعب
-                if(["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].indexOf(e.code) > -1) {
-                    e.preventDefault();
-                }
-
+                if (!isSnakePlaying) return;
+                if(["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].indexOf(e.code) > -1) e.preventDefault();
                 if (e.key === 'ArrowUp') changeSnakeDir('up');
                 if (e.key === 'ArrowDown') changeSnakeDir('down');
                 if (e.key === 'ArrowLeft') changeSnakeDir('left');
@@ -207,54 +285,58 @@
         }
 
         function updateCoins() { document.getElementById('coins-count').innerText = coins; }
+        
         function saveData() {
             localStorage.setItem('tg_hunger', hunger); localStorage.setItem('tg_happiness', happiness);
             localStorage.setItem('tg_energy', energy); localStorage.setItem('tg_xp', xp);
             localStorage.setItem('tg_coins', coins); localStorage.setItem('tg_sleeping', isSleeping);
-            localStorage.setItem('tg_acc', currentAcc);
+            localStorage.setItem('tg_acc', currentAcc); localStorage.setItem('tg_last_time', Date.now());
+            localStorage.setItem('tg_q1', q1Count); localStorage.setItem('tg_q2', q2Count); localStorage.setItem('tg_q3', q3Count);
+        }
+
+        function updateQuestsUI() {
+            document.getElementById('q1-prog').innerText = `${q1Count}/3`;
+            document.getElementById('q1-btn').disabled = q1Count < 3;
+            document.getElementById('q2-prog').innerText = `${q2Count}/1`;
+            document.getElementById('q2-btn').disabled = q2Count < 1;
+            document.getElementById('q3-prog').innerText = `${q3Count}/15`;
+            document.getElementById('q3-btn').disabled = q3Count < 15;
+        }
+
+        function claimQuest(num) {
+            soundWin();
+            if (num === 1) { coins += 15; q1Count = 0; document.getElementById('status-text').innerText = "تم إكمال مهمة الطعام ونلت 15 عملة! 🪙"; }
+            if (num === 2) { coins += 20; q2Count = 0; document.getElementById('status-text').innerText = "تم إكمال مهمة الدودة ونلت 20 عملة! 🪙"; }
+            if (num === 3) { coins += 25; q3Count = 0; document.getElementById('status-text').innerText = "تم إكمال مهمة النقر ونلت 25 عملة! 🪙"; }
+            updateCoins(); updateQuestsUI(); saveData();
         }
 
         function addXP(amount) {
-            xp += amount;
-            if (xp >= 100) { xp = 0; }
+            xp += amount; if (xp >= 100) xp = 0;
             saveData(); updateBars();
         }
 
         function checkStatus() {
-            const pet = document.getElementById('pet');
-            const statusText = document.getElementById('status-text');
-            const stageText = document.getElementById('pet-stage');
-            const mainControls = document.getElementById('main-controls');
+            const pet = document.getElementById('pet'); const statusText = document.getElementById('status-text');
+            const stageText = document.getElementById('pet-stage'); const mainControls = document.getElementById('main-controls');
             const restartBtn = document.getElementById('restart-btn');
 
             if (hunger <= 0 && happiness <= 0 && energy <= 0) {
-                pet.innerText = "💀"; pet.classList.remove('bounce');
+                pet.innerText = "💀"; pet.classList.remove('bounce'); soundLose();
                 document.getElementById('accessory').style.display = 'none';
                 statusText.innerText = "لقد ماتت القطة من الإهمال! 😭";
                 mainControls.style.display = 'none'; closeAllMenus();
                 restartBtn.style.display = 'block'; return;
             }
+            if (isSleeping) { pet.innerText = "😴"; statusText.innerText = "ششش.. أنا نائمة الآن 💤"; stageText.innerText = "المرحلة: قطة نائمة 🌙"; return; }
 
-            if (isSleeping) {
-                pet.innerText = "😴"; statusText.innerText = "ششش.. أنا نائمة الآن 💤";
-                stageText.innerText = "المرحلة: قطة نائمة 🌙"; return;
-            }
-
-            if (hunger > 70 && happiness > 70 && energy > 50) {
-                pet.innerText = "👑🐱"; stageText.innerText = "المرحلة: القطة الملكية الأسطورية 👑";
-                statusText.innerText = "أشعر كأنني ملكة هذا العالم! 🥰";
-            } else if (hunger < 40 || happiness < 40 || energy < 30) {
-                pet.innerText = "😿"; stageText.innerText = "المرحلة: قطة صغيرة تعيسة 💔";
-                statusText.innerText = "أنا جائعة ومتعبة.. اعتني بي! 😭";
-            } else {
-                pet.innerText = "😸"; stageText.innerText = "المرحلة: قطة بالغة ذكية 🐾";
-                statusText.innerText = "أنا بحالة جيدة وجاهزة للمرح! 🎈";
-            }
+            if (hunger > 70 && happiness > 70 && energy > 50) { pet.innerText = "👑🐱"; stageText.innerText = "المرحلة: القطة الملكية الأسطورية 👑"; statusText.innerText = "أشعر كأنني ملكة هذا العالم! 🥰"; } 
+            else if (hunger < 40 || happiness < 40 || energy < 30) { pet.innerText = "😿"; stageText.innerText = "المرحلة: قطة صغيرة تعيسة 💔"; statusText.innerText = "أنا جائعة ومتعبة.. اعتني بي! 😭"; } 
+            else { pet.innerText = "😸"; stageText.innerText = "المرحلة: قطة بالغة ذكية 🐾"; statusText.innerText = "أنا بحالة جيدة وجاهزة للمرح! 🎈"; }
         }
 
         function toggleSleep() {
-            isSleeping = !isSleeping;
-            const btn = document.getElementById('sleep-btn');
+            soundClick(); isSleeping = !isSleeping; const btn = document.getElementById('sleep-btn');
             if (isSleeping) { document.body.classList.add('sleeping'); btn.innerText = "استيقاظ ⏰"; closeAllMenus(); disableButtons(true); } 
             else { document.body.classList.remove('sleeping'); btn.innerText = "نوم 💤"; disableButtons(false); }
             saveData(); checkStatus();
@@ -263,27 +345,36 @@
         function disableButtons(status) { document.getElementById('feed-main').disabled = status; document.getElementById('play-main').disabled = status; }
         
         function toggleMenu(menuId) {
-            const menu = document.getElementById(menuId);
+            soundClick(); const menu = document.getElementById(menuId);
             ['food-menu', 'games-hub', 'shop-menu'].forEach(m => {
                 if(m === menuId) menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
                 else document.getElementById(m).style.display = 'none';
             });
-            if(menu.style.display === 'none') stopSnake();
+            if(menu.style.display === 'none') { stopSnake(); stopClicker(); }
         }
 
-        function closeAllMenus() { ['food-menu', 'games-hub', 'shop-menu'].forEach(m => document.getElementById(m).style.display = 'none'); stopSnake(); }
+        function closeAllMenus() { ['food-menu', 'games-hub', 'shop-menu'].forEach(m => document.getElementById(m).style.display = 'none'); stopSnake(); stopClicker(); }
 
-        function feed(text, val) {
-            if (hunger >= 100) { document.getElementById('status-text').innerText = "أنا ممتلئة تماماً! 😾"; return; }
-            hunger = Math.min(100, hunger + val); addXP(10); saveData(); updateBars();
+        function feed(text, hungerVal, energyVal) {
+            soundEat();
+            if (hunger >= 100 && energyVal <= 0) { document.getElementById('status-text').innerText = "أنا ممتلئة تماماً! 😾"; return; }
+            hunger = Math.min(100, Math.max(0, hunger + hungerVal));
+            energy = Math.min(100, Math.max(0, energy + energyVal));
+            
+            if(q1Count < 3) q1Count++;
+            addXP(12); updateQuestsUI(); saveData(); updateBars();
             document.getElementById('status-text').innerText = text;
         }
 
         function openGame(gameType) {
+            soundClick();
             document.getElementById('memory-game-area').style.display = gameType === 'memory' ? 'block' : 'none';
             document.getElementById('snake-game-area').style.display = gameType === 'snake' ? 'block' : 'none';
-            if (gameType === 'memory') { stopSnake(); startMemoryGame(); }
+            document.getElementById('clicker-game-area').style.display = gameType === 'clicker' ? 'block' : 'none';
+            stopSnake(); stopClicker();
+            if (gameType === 'memory') startMemoryGame();
             if (gameType === 'snake') startSnakeGame();
+            if (gameType === 'clicker') resetClickerGame();
         }
 
         // --- لعبة الذاكرة ---
@@ -300,6 +391,7 @@
         }
 
         function flipCard(card) {
+            soundClick();
             if (flippedCards.length < 2 && !card.classList.contains('flipped')) {
                 card.classList.add('flipped'); card.innerText = card.dataset.emoji; flippedCards.push(card);
                 if (flippedCards.length === 2) setTimeout(checkMatch, 600);
@@ -309,37 +401,33 @@
         function checkMatch() {
             const [card1, card2] = flippedCards;
             if (card1.dataset.emoji === card2.dataset.emoji) {
-                matchesFound += 2; happiness = Math.min(100, happiness + 10); addXP(10); updateBars();
-                if (matchesFound === emojis.length) { coins += 20; updateCoins(); saveData(); document.getElementById('status-text').innerText = "فزت في لعبة الذاكرة وربحت 20 عملة! 🪙🎉"; }
+                soundEat(); matchesFound += 2; happiness = Math.min(100, happiness + 10); addXP(10); updateBars();
+                if (matchesFound === emojis.length) { soundWin(); coins += 25; updateCoins(); saveData(); document.getElementById('status-text').innerText = "فزت في لعبة الذاكرة وربحت 25 عملة! 🪙🎉"; }
             } else { card1.classList.remove('flipped'); card2.classList.remove('flipped'); card1.innerText = ''; card2.innerText = ''; }
             flippedCards = []; saveData();
         }
 
-        // --- كود لعبة الدودة المحدث ---
-        let canvas, ctx, snake, food, dx, dy, snakeInterval;
-        const boxSize = 10;
+        // --- لعبة الدودة ---
+        let canvas, ctx, snake, food, dx, dy, snakeInterval; const boxSize = 10;
 
         function startSnakeGame() {
             canvas = document.getElementById('snake-canvas'); ctx = canvas.getContext('2d');
             snake = [{x: 50, y: 50}]; food = {x: 100, y: 100}; dx = boxSize; dy = 0;
-            isSnakePlaying = true;
-            clearInterval(snakeInterval);
+            isSnakePlaying = true; clearInterval(snakeInterval);
             snakeInterval = setInterval(updateSnake, 150);
-            document.getElementById('status-text').innerText = "تحكم بالأسهم ⌨️ أو أزرار الشاشة 📱 لأكل التفاح!";
+            document.getElementById('status-text').innerText = "تحكم بالأسهم ⌨️ أو الأزرار الشاشة 📱 لأكل التفاح!";
         }
 
         function updateSnake() {
             const head = {x: snake[0].x + dx, y: snake[0].y + dy};
-            
             if (head.x < 0 || head.x >= canvas.width || head.y < 0 || head.y >= canvas.height || snake.some(s => s.x === head.x && s.y === head.y)) {
-                stopSnake(); document.getElementById('status-text').innerText = "خسرت في لعبة الدودة! حاول مجدداً 🐍"; return;
+                stopSnake(); soundLose(); document.getElementById('status-text').innerText = "خسرت في لعبة الدودة! حاول مجدداً 🐍"; return;
             }
-
             snake.unshift(head);
             if (head.x === food.x && head.y === food.y) {
-                coins += 5; updateCoins(); happiness = Math.min(100, happiness + 5); updateBars(); saveData();
-                document.getElementById('status-text').innerText = "أكلت التفاحة! +5 عملات ذهبية 🪙";
-                generateFood();
+                soundEat(); coins += 5; updateCoins(); happiness = Math.min(100, happiness + 5); updateBars();
+                if(q2Count < 1) q2Count = 1;
+                updateQuestsUI(); saveData(); document.getElementById('status-text').innerText = "أكلت التفاحة! +5 عملات ذهبية 🪙"; generateFood();
             } else { snake.pop(); }
             drawSnake();
         }
@@ -351,36 +439,64 @@
         }
 
         function generateFood() {
-            food.x = Math.floor(Math.random() * (canvas.width/boxSize)) * boxSize;
-            food.y = Math.floor(Math.random() * (canvas.height/boxSize)) * boxSize;
+            food.x = Math.floor(Math.random() * (canvas.width/boxSize)) * boxSize; food.y = Math.floor(Math.random() * (canvas.height/boxSize)) * boxSize;
         }
 
         function changeSnakeDir(dir) {
-            if (dir === 'up' && dy === 0) { dx = 0; dy = -boxSize; }
-            if (dir === 'down' && dy === 0) { dx = 0; dy = boxSize; }
-            if (dir === 'left' && dx === 0) { dx = -boxSize; dy = 0; }
-            if (dir === 'right' && dx === 0) { dx = boxSize; dy = 0; }
+            soundClick();
+            if (dir === 'up' && dy === 0) { dx = 0; dy = -boxSize; } if (dir === 'down' && dy === 0) { dx = 0; dy = boxSize; }
+            if (dir === 'left' && dx === 0) { dx = -boxSize; dy = 0; } if (dir === 'right' && dx === 0) { dx = boxSize; dy = 0; }
+        }
+        function stopSnake() { isSnakePlaying = false; clearInterval(snakeInterval); }
+
+        // --- لعبة النقر السريع ---
+        function resetClickerGame() {
+            clickScore = 0; clickTimer = 10;
+            document.getElementById('clicker-score').innerText = "النقاط: 0"; document.getElementById('clicker-timer').innerText = "الوقت: 10s";
+            document.getElementById('start-clicker-btn').style.display = "inline-block"; document.getElementById('clicker-target').style.display = "none";
         }
 
-        function stopSnake() { isSnakePlaying = false; clearInterval(snakeInterval); }
+        function startClickerGame() {
+            resetClickerGame(); soundClick();
+            document.getElementById('start-clicker-btn').style.display = "none"; document.getElementById('clicker-target').style.display = "flex";
+            clickInterval = setInterval(() => {
+                clickTimer--; document.getElementById('clicker-timer').innerText = `الوقت: ${clickTimer}s`;
+                if (clickTimer <= 0) {
+                    stopClicker(); soundWin();
+                    let earnedCoins = Math.floor(clickScore * 1.5); coins += earnedCoins;
+                    happiness = Math.min(100, happiness + 20); updateCoins(); updateBars();
+                    if(clickScore > q3Count) q3Count = Math.min(15, clickScore);
+                    updateQuestsUI(); saveData();
+                    document.getElementById('status-text').innerText = `انتهى الوقت! نقرتِ ${clickScore} مرة وربحتِ ${earnedCoins} عملة! 🪙🎉`;
+                    document.getElementById('start-clicker-btn').style.display = "inline-block"; document.getElementById('clicker-target').style.display = "none";
+                }
+            }, 1000);
+        }
+
+        function hitTarget() { soundClick(); clickScore++; document.getElementById('clicker-score').innerText = `النقاط: ${clickScore}`; }
+        function stopClicker() { clearInterval(clickInterval); }
 
         // --- المتجر والريستارت ---
         function buyAccessory(acc, cost) {
+            soundClick();
             if (coins >= cost) {
-                coins -= cost; currentAcc = acc; updateCoins(); saveData();
+                coins -= cost; currentAcc = acc; updateCoins(); soundWin(); saveData();
                 document.getElementById('accessory').innerText = currentAcc; document.getElementById('accessory').style.display = 'block';
                 document.getElementById('status-text').innerText = `تم شراء الملصق بنجاح! ${acc}`;
             } else { document.getElementById('status-text').innerText = "العملات غير كافية! ❌"; }
         }
 
         function restartGame() {
-            hunger = 100; happiness = 100; energy = 100; xp = 0; coins = 0; isSleeping = false; currentAcc = '';
-            document.getElementById('accessory').style.display = 'none';
-            saveData(); updateBars(); updateCoins();
+            soundWin(); hunger = 100; happiness = 100; energy = 100; xp = 0; coins = 0; isSleeping = false; currentAcc = '';
+            q1Count = 0; q2Count = 0; q3Count = 0; document.getElementById('accessory').style.display = 'none';
+            saveData(); updateBars(); updateCoins(); updateQuestsUI();
             document.getElementById('main-controls').style.display = 'flex'; document.getElementById('restart-btn').style.display = 'none';
             disableButtons(false); document.body.classList.remove('sleeping'); document.getElementById('sleep-btn').innerText = "نوم 💤";
             startLoop(); checkStatus();
         }
+
+        // حفظ التوقيت عند إغلاق الصفحة
+        window.addEventListener('beforeunload', () => { localStorage.setItem('tg_last_time', Date.now()); });
 
         initGame();
     </script>
